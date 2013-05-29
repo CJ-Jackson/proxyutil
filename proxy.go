@@ -12,15 +12,15 @@ type Domain interface {
 	MatchString(string) bool
 }
 
-type StrDomain string
+type strDomain string
 
-func (s StrDomain) MatchString(str string) bool {
+func (s strDomain) MatchString(str string) bool {
 	return string(s) == str
 }
 
-type StrDomains []string
+type strDomains []string
 
-func (s StrDomains) MatchString(str string) bool {
+func (s strDomains) MatchString(str string) bool {
 	for _, ss := range []string(s) {
 		if ss == str {
 			return true
@@ -34,12 +34,17 @@ func Str(str ...string) Domain {
 		return nil
 	}
 	if len(str) == 1 {
-		return StrDomain(str[0])
+		return strDomain(str[0])
 	}
-	return StrDomains(str)
+	return strDomains(str)
 }
 
-func RegExp(pattern string) *regexp.Regexp {
+// Alais of Str
+func Names(names ...string) Domain {
+	return Str(names...)
+}
+
+func RegExp(pattern string) Domain {
 	return regexp.MustCompile(pattern)
 }
 
@@ -68,8 +73,6 @@ func (li *ListOfHosts) getHost() []Host {
 	return append([]Host{}, li.li...)
 }
 
-var Hosts = &ListOfHosts{}
-
 func hostnameWithoutPort(str string) string {
 	hostname, _, err := net.SplitHostPort(str)
 	if err != nil {
@@ -78,28 +81,35 @@ func hostnameWithoutPort(str string) string {
 	return hostname
 }
 
+func hostDealer(host Host, res http.ResponseWriter, req *http.Request) {
+	if IsWebSocket(req) {
+		if host.WS != nil {
+			host.WS.ServeHTTP(res, req)
+		}
+		return
+	}
+
+	if host.Prepare != nil {
+		host.Prepare.ServeHTTP(res, req)
+	}
+
+	if host.Proxy != nil {
+		host.Proxy.ServeHTTP(res, req)
+	}
+
+	if host.Finish != nil {
+		host.Finish.ServeHTTP(res, req)
+	}
+}
+
 func proxy(res http.ResponseWriter, req *http.Request) {
 	hostname := hostnameWithoutPort(req.Host)
 	for _, host := range Hosts.getHost() {
+		if host.Domain == nil {
+			continue
+		}
 		if host.Domain.MatchString(hostname) {
-			if IsWebSocket(req) {
-				if host.WS != nil {
-					host.WS.ServeHTTP(res, req)
-				}
-				return
-			}
-
-			if host.Prepare != nil {
-				host.Prepare.ServeHTTP(res, req)
-			}
-
-			if host.Proxy != nil {
-				host.Proxy.ServeHTTP(res, req)
-			}
-
-			if host.Finish != nil {
-				host.Finish.ServeHTTP(res, req)
-			}
+			hostDealer(host, res, req)
 			return
 		}
 	}
@@ -116,9 +126,9 @@ func secure(res http.ResponseWriter, req *http.Request) {
 }
 
 func Serve() {
-	http.ListenAndServe(":80", http.HandlerFunc(nonsecure))
+	http.ListenAndServe(DefaultAddr, http.HandlerFunc(nonsecure))
 }
 
 func ServeTLS(certFile, keyFile string) {
-	http.ListenAndServeTLS(":443", certFile, keyFile, http.HandlerFunc(secure))
+	http.ListenAndServeTLS(DefaultAddrTLS, certFile, keyFile, http.HandlerFunc(secure))
 }
