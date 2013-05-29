@@ -100,10 +100,18 @@ func hostDealer(host Host, res http.ResponseWriter, req *http.Request) {
 	if host.Finish != nil {
 		host.Finish.ServeHTTP(res, req)
 	}
+
 }
 
 func proxy(res http.ResponseWriter, req *http.Request) {
 	hostname := hostnameWithoutPort(req.Host)
+	if Prepare != nil {
+		Prepare.ServeHTTP(res, req)
+	}
+
+	if Finish != nil {
+		defer Finish.ServeHTTP(res, req)
+	}
 	for _, host := range Hosts.getHost() {
 		if host.Domain == nil {
 			continue
