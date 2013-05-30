@@ -100,7 +100,6 @@ func hostDealer(host Host, res http.ResponseWriter, req *http.Request) {
 	if host.Finish != nil {
 		host.Finish.ServeHTTP(res, req)
 	}
-
 }
 
 func proxy(res http.ResponseWriter, req *http.Request) {
