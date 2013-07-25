@@ -111,11 +111,23 @@ func proxy(res http.ResponseWriter, req *http.Request) {
 	if Finish != nil {
 		defer Finish.ServeHTTP(res, req)
 	}
+
+	cache.RLock()
+	if host, ok := cache.m[hostname].(Host); ok {
+		cache.Unlock()
+		hostDealer(host, res, req)
+		return
+	}
+	cache.RUnlock()
+
 	for _, host := range Hosts.getHost() {
 		if host.Domain == nil {
 			continue
 		}
 		if host.Domain.MatchString(hostname) {
+			cache.Lock()
+			cache.m[hostname] = host
+			cache.Unlock()
 			hostDealer(host, res, req)
 			return
 		}
