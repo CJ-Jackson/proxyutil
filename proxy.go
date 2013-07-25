@@ -115,7 +115,7 @@ func proxy(res http.ResponseWriter, req *http.Request) {
 	cache.RLock()
 	switch host := cache.m[hostname].(type) {
 	case *Host:
-		cache.Unlock()
+		cache.RUnlock()
 		hostDealer(host, res, req)
 		return
 	case bool:
