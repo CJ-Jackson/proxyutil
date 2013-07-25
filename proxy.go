@@ -81,7 +81,7 @@ func hostnameWithoutPort(str string) string {
 	return hostname
 }
 
-func hostDealer(host Host, res http.ResponseWriter, req *http.Request) {
+func hostDealer(host *Host, res http.ResponseWriter, req *http.Request) {
 	if IsWebSocket(req) {
 		if host.WS != nil {
 			host.WS.ServeHTTP(res, req)
@@ -113,9 +113,13 @@ func proxy(res http.ResponseWriter, req *http.Request) {
 	}
 
 	cache.RLock()
-	if host, ok := cache.m[hostname].(Host); ok {
+	switch host := cache.m[hostname].(type) {
+	case *Host:
 		cache.Unlock()
 		hostDealer(host, res, req)
+		return
+	case bool:
+		cache.RUnlock()
 		return
 	}
 	cache.RUnlock()
@@ -126,12 +130,16 @@ func proxy(res http.ResponseWriter, req *http.Request) {
 		}
 		if host.Domain.MatchString(hostname) {
 			cache.Lock()
-			cache.m[hostname] = host
+			cache.m[hostname] = &host
 			cache.Unlock()
-			hostDealer(host, res, req)
+			hostDealer(&host, res, req)
 			return
 		}
 	}
+
+	cache.Lock()
+	cache.m[hostname] = false
+	cache.Unlock()
 }
 
 func nonsecure(res http.ResponseWriter, req *http.Request) {
