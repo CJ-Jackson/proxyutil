@@ -81,6 +81,14 @@ func hostnameWithoutPort(str string) string {
 	return hostname
 }
 
+func cut(res http.ResponseWriter) bool {
+	if res.Header().Get("X-Cut") != "" {
+		res.Header().Del("X-Cut")
+		return true
+	}
+	return false
+}
+
 func hostDealer(host *Host, res http.ResponseWriter, req *http.Request) {
 	if IsWebSocket(req) {
 		if host.WS != nil {
@@ -93,13 +101,18 @@ func hostDealer(host *Host, res http.ResponseWriter, req *http.Request) {
 		host.Prepare.ServeHTTP(res, req)
 	}
 
+	if host.Finish != nil {
+		defer host.Finish.ServeHTTP(res, req)
+	}
+
+	if cut(res) {
+		return
+	}
+
 	if host.Proxy != nil {
 		host.Proxy.ServeHTTP(res, req)
 	}
 
-	if host.Finish != nil {
-		host.Finish.ServeHTTP(res, req)
-	}
 }
 
 func proxy(res http.ResponseWriter, req *http.Request) {
@@ -110,6 +123,10 @@ func proxy(res http.ResponseWriter, req *http.Request) {
 
 	if Finish != nil {
 		defer Finish.ServeHTTP(res, req)
+	}
+
+	if cut(res) {
+		return
 	}
 
 	cache.RLock()
