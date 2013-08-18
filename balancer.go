@@ -11,7 +11,7 @@ type balencer struct {
 }
 
 // Generic HTTP Balancer!  It's can balance any http.Handler!
-// It can balance a Balancer, but that just silly!
+// It can balance a Balancer, but that just plain  silly!
 func Balencer(handlers ...http.Handler) http.Handler {
 	bal := &balencer{}
 	bal.Lock()

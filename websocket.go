@@ -7,12 +7,21 @@ import (
 	"net/http"
 )
 
+/* func WebsocketProxyUnix(target string) http.Handler {
+	return websocketProxy("unix", target)
+} */
+
+// Set up Websocket Proxy
 func WebsocketProxy(target string) http.Handler {
+	return websocketProxy("tcp", target)
+}
+
+func websocketProxy(protocol, target string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		clientIp, _, _ := net.SplitHostPort(r.RemoteAddr)
 		r.Header.Set("X-Forwarded-For", clientIp)
 
-		d, err := net.Dial("tcp", target)
+		d, err := net.Dial(protocol, target)
 		if err != nil {
 			http.Error(w, "Error contacting backend server.", 500)
 			log.Printf("Error dialing websocket backend %s: %v", target, err)
@@ -48,6 +57,7 @@ func WebsocketProxy(target string) http.Handler {
 	})
 }
 
+// Check if connection is websocket if so returns true, otherwise false
 func IsWebSocket(req *http.Request) bool {
 	return req.Header.Get("Connection") == "Upgrade" && req.Header.Get("Upgrade") == "websocket"
 }

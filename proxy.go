@@ -8,6 +8,7 @@ import (
 	"sync"
 )
 
+// Domain Interface!
 type Domain interface {
 	MatchString(string) bool
 }
@@ -29,6 +30,7 @@ func (s strDomains) MatchString(str string) bool {
 	return false
 }
 
+// Create Domain String Matcher
 func Str(str ...string) Domain {
 	if len(str) <= 0 {
 		return nil
@@ -44,6 +46,7 @@ func Names(names ...string) Domain {
 	return Str(names...)
 }
 
+// Create Domain RegExp Matcher
 func RegExp(pattern string) Domain {
 	return regexp.MustCompile(pattern)
 }
@@ -112,7 +115,6 @@ func hostDealer(host *Host, res http.ResponseWriter, req *http.Request) {
 	if host.Proxy != nil {
 		host.Proxy.ServeHTTP(res, req)
 	}
-
 }
 
 func proxy(res http.ResponseWriter, req *http.Request) {
@@ -169,10 +171,12 @@ func secure(res http.ResponseWriter, req *http.Request) {
 	proxy(res, req)
 }
 
+// Start Http Proxy
 func Serve() {
 	http.ListenAndServe(DefaultAddr, http.HandlerFunc(nonsecure))
 }
 
+// Start Http Proxy (using TLS)
 func ServeTLS(certFile, keyFile string) {
 	http.ListenAndServeTLS(DefaultAddrTLS, certFile, keyFile, http.HandlerFunc(secure))
 }
